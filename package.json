@@ -8,15 +8,24 @@
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "electron:start": "electron ."
+    "electron:start": "electron .",
+    "eslintInit": "eslint --init",
+    "lint": "eslint 'src/**/*.{js,vue}' --fix"
   },
   "dependencies": {
     "vue": "^3.3.4"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
     "@vitejs/plugin-vue": "^4.2.3",
     "electron": "^26.1.0",
-    "typescript": "^5.0.2",
+    "eslint": "^8.47.0",
+    "eslint-config-standard-with-typescript": "^38.0.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-n": "^16.0.2",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-vue": "^9.17.0",
+    "typescript": "^5.1.6",
     "vite": "^4.4.5",
     "vue-tsc": "^1.8.5"
   }
