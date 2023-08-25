@@ -25,8 +25,10 @@
     "eslint-plugin-n": "^16.0.2",
     "eslint-plugin-promise": "^6.1.1",
     "eslint-plugin-vue": "^9.17.0",
+    "prettier-eslint": "^15.0.1",
     "typescript": "^5.1.6",
     "vite": "^4.4.5",
-    "vue-tsc": "^1.8.5"
+    "vue-tsc": "^1.8.5",
+    "vuetify": "^3.3.14"
   }
 }
