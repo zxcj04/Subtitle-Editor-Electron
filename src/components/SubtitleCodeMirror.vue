@@ -52,16 +52,14 @@ const onGroupUpdate = (nowGroup: number, state: EditorState) => {
     emit("update-now-group", nowGroup);
 
     if (view.value !== undefined) {
-      const nowLineTop = view.value.lineBlockAt(
-        state.selection.main.head
-      ).top;
+      const nowLineTop = view.value.lineBlockAt(state.selection.main.head).top;
       view.value.scrollDOM.scroll({
         top: nowLineTop - view.value.defaultLineHeight * 5,
         behavior: "smooth",
       });
     }
   }
-}
+};
 
 const onViewUpdate = (update: ViewUpdate) => {
   const line =
@@ -89,7 +87,7 @@ interface group {
 
 const createNewGroup = (g: group) => {
   const nextGroup = lastGroup.value + 1;
-  const nextGroupLine = nextGroup * 4+1;
+  const nextGroupLine = nextGroup * 4 + 1;
 
   if (view.value !== undefined) {
     const pos = view.value.state.doc.line(nextGroupLine).from;
@@ -137,7 +135,9 @@ const editCursorLineTime = (t: string) => {
     return;
   }
 
-  const line = view.value.state.doc.lineAt(view.value.state.selection.main.head);
+  const line = view.value.state.doc.lineAt(
+    view.value.state.selection.main.head
+  );
   const posInLine = view.value.state.selection.main.head - line.from;
   const lineText = line.text;
 
@@ -159,7 +159,7 @@ const editCursorLineTime = (t: string) => {
       selection: EditorSelection.cursor(pos + posInLine),
     });
   }
-}
+};
 
 const forceFocusOnEditor = () => {
   if (view.value !== undefined) {

@@ -74,7 +74,10 @@ const updateVideoTime = () => {
     return false;
   }
 
-  videoCardRef.value.updatePlayingTime(nowGroupTime.value, nowGroupDuration.value);
+  videoCardRef.value.updatePlayingTime(
+    nowGroupTime.value,
+    nowGroupDuration.value
+  );
 };
 
 interface HotKeyInfo {

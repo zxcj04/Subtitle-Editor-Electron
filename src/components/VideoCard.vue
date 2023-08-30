@@ -55,7 +55,7 @@ const onVideoTimeUpdate = () => {
     minutes
   )}:${formatTime(seconds)},${formatMilliseconds(milliseconds)}`;
 
-  if(videoPlayerElement.value.currentTime > stopVideoTime.value) {
+  if (videoPlayerElement.value.currentTime > stopVideoTime.value) {
     videoPlayerElement.value.pause();
     stopVideoTime.value = Number.MAX_SAFE_INTEGER;
   }
@@ -270,7 +270,7 @@ defineExpose({
         controls
         :loop="false"
         :volume="0.05"
-        style="height: 100%;"
+        style="height: 100%"
         :fluid="true"
         :tracks="videoPlayerTracks"
         @mounted="onVideoMounted"

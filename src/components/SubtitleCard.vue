@@ -8,9 +8,9 @@ import SubtitleCodeMirror from "./SubtitleCodeMirror.vue";
 import { nextTick } from "vue";
 
 const subtitleFileSelector = ref<VFileInput | null>(null);
-const subtitleCodeMirrorRef = ref<InstanceType<typeof SubtitleCodeMirror> | null>(
-  null
-);
+const subtitleCodeMirrorRef = ref<InstanceType<
+  typeof SubtitleCodeMirror
+> | null>(null);
 
 const subtitleFile = ref<Array<File>>([]);
 const subtitleText = ref<string>("");
@@ -77,8 +77,7 @@ const updateNowGroup = (nowGroup: number) => {
 };
 
 const createNewGroup = async () => {
-  if (subtitleCodeMirrorRef.value === null)
-    return;
+  if (subtitleCodeMirrorRef.value === null) return;
 
   const lastSubtitle = subtitleList.value[lastGroup.value];
 
@@ -93,22 +92,19 @@ const createNewGroup = async () => {
 };
 
 const jumpToNextGroup = () => {
-  if (subtitleCodeMirrorRef.value === null)
-    return;
+  if (subtitleCodeMirrorRef.value === null) return;
 
   subtitleCodeMirrorRef.value.jumpToNextGroup();
 };
 
 const jumpToPrevGroup = () => {
-  if (subtitleCodeMirrorRef.value === null)
-    return;
+  if (subtitleCodeMirrorRef.value === null) return;
 
   subtitleCodeMirrorRef.value.jumpToPrevGroup();
 };
 
 const editCursorLineTime = (time: string) => {
-  if (subtitleCodeMirrorRef.value === null)
-    return;
+  if (subtitleCodeMirrorRef.value === null) return;
 
   subtitleCodeMirrorRef.value.editCursorLineTime(time);
 };
