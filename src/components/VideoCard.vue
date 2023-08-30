@@ -24,6 +24,7 @@ const onVideoFilesChange = () => {
 
   const fileURL = URL.createObjectURL(videoFiles.value[0]);
   videoPlayerElement.value.src = fileURL;
+  videoPlayerElement.value.pause();
   videoPlayerElement.value.currentTime = 0;
 
   updateNowPlayingTrack(lastBlobURL.value);

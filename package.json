@@ -1,17 +1,39 @@
 {
   "name": "subtitle-video-editor-electron",
+  "description": "An electron app to edit subtitles with only keyboards",
+  "author": "Fanrende",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "main": "main.ts",
+  "version": "1.0.0",
+  "main": "electron/main.ts",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "electron:start": "electron .",
-    "electron:build": "electron-builder build -mwl",
+    "electron": "wait-on tcp:5173 && NODE_ENV=development electron .",
+    "electron:start": "concurrently -k \"npm run dev\" \"npm run electron\"",
+    "electron:build": "vite build && electron-builder",
+    "electron:build-all": "vite build && electron-builder -lw",
     "eslintInit": "eslint --init",
     "lint": "eslint 'src/**/*.{js,vue}' --fix"
+  },
+  "build": {
+    "productName": "嘜唄鍮的字幕編輯器",
+    "appId": "com.fanrende.subtitle-video-editor",
+    "copyright": "Copyright © 2023 fanrende",
+    "mac": {
+      "icon": "./public/catLogo.png"
+    },
+    "win": {
+      "icon": "./public/catLogo.png"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist_electron"
+    }
   },
   "dependencies": {
     "@codemirror/commands": "^6.2.4",
@@ -22,17 +44,22 @@
     "@vue/eslint-config-typescript": "^11.0.3",
     "codemirror": "^6.0.1",
     "codemirror-lang-srt": "^0.1.2",
+    "concurrently": "^8.2.1",
+    "cross-env": "^7.0.3",
     "srt-parser-2": "^1.2.3",
     "video.js": "^8.5.2",
     "vue": "^3.3.4",
     "vue-codemirror": "^6.1.1",
-    "vue3-hotkey": "^1.0.3"
+    "vue3-hotkey": "^1.0.3",
+    "wait-on": "^7.0.1"
   },
   "devDependencies": {
     "@mdi/font": "^7.2.96",
     "@typescript-eslint/eslint-plugin": "^6.4.1",
     "@vitejs/plugin-vue": "^4.2.3",
     "electron": "^26.1.0",
+    "electron-builder": "^24.6.3",
+    "electron-vite": "^1.0.27",
     "eslint": "^8.47.0",
     "eslint-config-standard-with-typescript": "^38.0.0",
     "eslint-plugin-import": "^2.28.1",
