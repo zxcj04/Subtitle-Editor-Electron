@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, shallowRef, computed, onUnmounted } from "vue";
+import { ref, shallowRef, computed, onMounted, onUnmounted } from "vue";
 
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "codemirror";
 import { ViewUpdate } from "@codemirror/view";
-import { onMounted } from "vue";
+import { srt } from "codemirror-lang-srt";
 
 const codemirrorRef = ref<InstanceType<typeof Codemirror> | null>(null);
 
@@ -30,7 +30,7 @@ const subtitle = computed({
   },
 });
 
-const extensions = [oneDark];
+const extensions = [oneDark, srt()];
 
 // Codemirror EditorView instance ref
 const view = shallowRef<EditorView>();
@@ -61,10 +61,36 @@ const onGroupUpdate = (nowGroup: number, state: EditorState) => {
   }
 };
 
+const whichGroup = (line: number) => {
+  const groups = subtitle.value.split("\n\n");
+  const groupsLines = groups.map((g) => g.split("\n").length);
+  const groupSumLines = groupsLines.reduce((prev, cur) => {
+    if (prev.length > 0)
+      prev.push(cur + prev[prev.length - 1] + 1);
+    else
+      prev.push(cur + 1);
+    return prev;
+  }, Array<number>(0));
+  const index = groupSumLines.findIndex((g) => g > line - 1);
+  return index >= 0 ? index : 0;
+};
+
+const whichLine = (group: number) => {
+  const groups = subtitle.value.split("\n\n");
+  const groupsLines = groups.map((g) => g.split("\n").length);
+  const groupSumLines = groupsLines.reduce((prev, cur) => {
+    if (prev.length > 0)
+      prev.push(cur + prev[prev.length - 1] + 1);
+    else
+      prev.push(cur + 1);
+    return prev;
+  }, Array<number>(0));
+  return groupSumLines[group];
+};
+
 const onViewUpdate = (update: ViewUpdate) => {
-  const line =
-    update.state.doc.lineAt(update.state.selection.main.head).number - 1;
-  const nowGroup = Math.floor(line / 4);
+  const line = update.state.doc.lineAt(update.state.selection.main.head).number;
+  const nowGroup = whichGroup(line);
 
   onGroupUpdate(nowGroup, update.state);
 };
@@ -85,16 +111,31 @@ interface group {
   text: string;
 }
 
+const initWithoutFile = () => {
+  if (view.value !== undefined) {
+    view.value.dispatch({
+      changes: {
+        from: 0,
+        insert: "1\n00:00:00,000 --> 00:00:00,000\n\n\n",
+      },
+      selection: EditorSelection.cursor(0),
+    });
+  }
+
+  const group = whichGroup(0);
+  onGroupUpdate(group, view.value!.state);
+};
+
 const createNewGroup = (g: group) => {
+  const lastGroupLine = whichLine(lastGroup.value) - 1;
   const nextGroup = lastGroup.value + 1;
-  const nextGroupLine = nextGroup * 4 + 1;
 
   if (view.value !== undefined) {
-    const pos = view.value.state.doc.line(nextGroupLine).from;
+    const pos = view.value.state.doc.line(lastGroupLine).to;
     view.value.dispatch({
       changes: {
         from: pos,
-        insert: `${g.index}\n${g.start} --> ${g.end}\n${g.text}\n\n`,
+        insert: `\n\n${g.index}\n${g.start} --> ${g.end}\n${g.text}`,
       },
       selection: EditorSelection.cursor(pos),
     });
@@ -141,6 +182,9 @@ const editCursorLineTime = (t: string) => {
   const posInLine = view.value.state.selection.main.head - line.from;
   const lineText = line.text;
 
+  if (!lineText.match(new RegExp(/(\d{2}:){2}\d{2},\d{3} --> (\d{2}:){2}\d{2},\d{3}/)))
+    return;
+
   const isStart = posInLine < 12;
   const isEnd = posInLine >= 17;
 
@@ -183,6 +227,7 @@ defineExpose({
   jumpToLine,
   jumpToNextGroup,
   jumpToPrevGroup,
+  initWithoutFile,
   createNewGroup,
   editCursorLineTime,
 });
@@ -193,7 +238,7 @@ defineExpose({
     ref="codemirrorRef"
     v-model="subtitle"
     placeholder="空空如也~~"
-    :style="{ height: '70vh' }"
+    :style="{ height: '60vh' }"
     :indent-with-tab="true"
     :tab-size="2"
     :extensions="extensions"

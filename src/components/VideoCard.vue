@@ -57,6 +57,7 @@ const onVideoTimeUpdate = () => {
 
   if (videoPlayerElement.value.currentTime > stopVideoTime.value) {
     videoPlayerElement.value.pause();
+    videoPlayerElement.value.currentTime = stopVideoTime.value;
     stopVideoTime.value = Number.MAX_SAFE_INTEGER;
   }
 
@@ -64,6 +65,10 @@ const onVideoTimeUpdate = () => {
 };
 
 animationFrameTask.value = requestAnimationFrame(onVideoTimeUpdate);
+
+const interruptStopVideoTime = () => {
+  stopVideoTime.value = Number.MAX_SAFE_INTEGER;
+};
 
 watch(videoFiles, onVideoFilesChange);
 
@@ -102,24 +107,25 @@ const updateSubtitle = (subtitle: string) => {
   updateNowPlayingTrack(blobURL);
 };
 
-const stopVideoTime = ref<number>(Math.max());
+const stopVideoTime = ref<number>(Number.MAX_SAFE_INTEGER);
 
 const updatePlayingTime = async (start: number, duration: number) => {
   if (videoPlayerElement.value !== null) {
+    videoPlayerElement.value.pause();
     videoPlayerElement.value.currentTime = start;
-    await videoPlayerElement.value.play();
-
     stopVideoTime.value = videoPlayerElement.value.currentTime + duration;
   }
 };
 
 const pause = () => {
+  interruptStopVideoTime();
   if (videoPlayerElement.value !== null) {
     videoPlayerElement.value.pause();
   }
 };
 
 const play = () => {
+  interruptStopVideoTime();
   if (videoPlayerElement.value !== null) {
     videoPlayerElement.value.play();
   }
@@ -128,9 +134,9 @@ const play = () => {
 const togglePlay = () => {
   if (videoPlayerElement.value !== null) {
     if (videoPlayerElement.value.paused) {
-      videoPlayerElement.value.play();
+      play();
     } else {
-      videoPlayerElement.value.pause();
+      pause();
     }
   }
 };
@@ -147,36 +153,6 @@ const previousFrame = () => {
   if (videoPlayerElement.value !== null) {
     videoPlayerElement.value.currentTime -= 1 / 30;
   }
-};
-
-const holdNextFrameInterval = ref<NodeJS.Timeout | null>(null);
-
-const holdNextFrame = () => {
-  if (holdNextFrameInterval.value !== null) {
-    clearInterval(holdNextFrameInterval.value);
-    holdNextFrameInterval.value = null;
-    return;
-  }
-
-  nextFrame();
-  holdNextFrameInterval.value = setInterval(() => {
-    nextFrame();
-  }, 100);
-};
-
-const holdPreviousFrameInterval = ref<NodeJS.Timeout | null>(null);
-
-const holdPreviousFrame = () => {
-  if (holdPreviousFrameInterval.value !== null) {
-    clearInterval(holdPreviousFrameInterval.value);
-    holdPreviousFrameInterval.value = null;
-    return;
-  }
-
-  previousFrame();
-  holdPreviousFrameInterval.value = setInterval(() => {
-    previousFrame();
-  }, 100);
 };
 
 const fastPlaybackRate = () => {
@@ -208,12 +184,14 @@ const togglePlaybackRate = () => {
 };
 
 const forward = () => {
+  interruptStopVideoTime();
   if (videoPlayerElement.value !== null) {
     videoPlayerElement.value.currentTime += 5;
   }
 };
 
 const backward = () => {
+  interruptStopVideoTime();
   if (videoPlayerElement.value !== null) {
     const t = videoPlayerElement.value.currentTime - 5;
     videoPlayerElement.value.currentTime = t < 0 ? 0 : t;
@@ -231,12 +209,11 @@ onBeforeUnmount(() => {
 });
 
 defineExpose({
+  interruptStopVideoTime,
   updatePlayingTime,
   updateSubtitle,
   nextFrame,
   previousFrame,
-  holdNextFrame,
-  holdPreviousFrame,
   play,
   pause,
   togglePlay,

@@ -9,6 +9,7 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "electron:start": "electron .",
+    "electron:build": "electron-builder build -mwl",
     "eslintInit": "eslint --init",
     "lint": "eslint 'src/**/*.{js,vue}' --fix"
   },
@@ -20,6 +21,7 @@
     "@videojs-player/vue": "^1.0.0",
     "@vue/eslint-config-typescript": "^11.0.3",
     "codemirror": "^6.0.1",
+    "codemirror-lang-srt": "^0.1.2",
     "srt-parser-2": "^1.2.3",
     "video.js": "^8.5.2",
     "vue": "^3.3.4",

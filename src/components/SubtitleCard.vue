@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, nextTick } from "vue";
 
 import { Srt, toList, toSrt } from "@/lib/srtParser";
 import { VFileInput } from "vuetify/components";
 
 import SubtitleCodeMirror from "./SubtitleCodeMirror.vue";
-import { nextTick } from "vue";
 
 const subtitleFileSelector = ref<VFileInput | null>(null);
 const subtitleCodeMirrorRef = ref<InstanceType<
@@ -55,11 +54,16 @@ const onSubtitleFileChange = async () => {
 watch(subtitleFile, onSubtitleFileChange);
 watch(subtitleText, () => {
   emit("update-subtitle", subtitleText.value);
+  updateNowGroup(lastGroup.value);
 });
 
 const lastGroup = ref<number>(0);
 
 const updateNowGroup = (nowGroup: number) => {
+  if (subtitleList.value.length <= nowGroup) {
+    return false;
+  }
+
   lastGroup.value = nowGroup;
 
   if (subtitleList.value.length === 0) {
@@ -76,13 +80,37 @@ const updateNowGroup = (nowGroup: number) => {
   emit("update-time", t, duration);
 };
 
-const createNewGroup = async () => {
+const initWithoutFile = () => {
+  subtitleCodeMirrorRef.value?.initWithoutFile();
+};
+
+const createNewGroup = async (t: string) => {
+  if (subtitleCodeMirrorRef.value === null) return;
+
+  if (subtitleList.value.length == 0) {
+    initWithoutFile();
+    return;
+  }
+
+  const id = subtitleList.value[lastGroup.value].id;
+
+  subtitleCodeMirrorRef.value.createNewGroup({
+    index: id,
+    start: t,
+    end: t,
+    text: "",
+  });
+
+  await nextTick();
+};
+
+const copyNowGroup = async () => {
   if (subtitleCodeMirrorRef.value === null) return;
 
   const lastSubtitle = subtitleList.value[lastGroup.value];
 
   subtitleCodeMirrorRef.value.createNewGroup({
-    index: parseInt(lastSubtitle.id) + 1 + "",
+    index: lastSubtitle.id,
     start: lastSubtitle.startTime,
     end: lastSubtitle.endTime,
     text: lastSubtitle.text,
@@ -113,12 +141,13 @@ defineExpose({
   jumpToNextGroup,
   jumpToPrevGroup,
   createNewGroup,
+  copyNowGroup,
   editCursorLineTime,
 });
 </script>
 
 <template>
-  <v-card max-height="90vh">
+  <v-card max-height="70vh">
     <v-card-text>
       <v-file-input
         ref="subtitleFileSelector"

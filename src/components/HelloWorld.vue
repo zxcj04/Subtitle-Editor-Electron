@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import useHotkey, { HotKey } from "vue3-hotkey";
 
 import SubtitleCard from "@/components/SubtitleCard.vue";
 import VideoCard from "@/components/VideoCard.vue";
@@ -80,6 +79,13 @@ const updateVideoTime = () => {
   );
 };
 
+interface HotKey {
+  keys: string[];
+  repeat?: boolean;
+  preventDefault?: boolean;
+  handler: () => void;
+}
+
 interface HotKeyInfo {
   key: HotKey;
   info: string;
@@ -88,7 +94,7 @@ interface HotKeyInfo {
 const hotkeysInfo = ref<HotKeyInfo[]>([
   {
     key: {
-      keys: ["ctrl", "alt", "e"],
+      keys: ["alt", "e"],
       repeat: true,
       preventDefault: true,
       handler() {
@@ -99,7 +105,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "q"],
+      keys: ["alt", "q"],
       repeat: true,
       preventDefault: true,
       handler() {
@@ -110,7 +116,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "w"],
+      keys: ["alt", "w"],
       preventDefault: true,
       handler() {
         videoCardRef.value?.togglePlay();
@@ -120,7 +126,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "r"],
+      keys: ["alt", "r"],
       preventDefault: true,
       handler() {
         updateVideoTime();
@@ -130,7 +136,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "a"],
+      keys: ["alt", "a"],
       preventDefault: true,
       handler() {
         videoCardRef.value?.backward();
@@ -140,7 +146,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "s"],
+      keys: ["alt", "s"],
       preventDefault: true,
       handler() {
         videoCardRef.value?.togglePlaybackRate();
@@ -150,7 +156,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "d"],
+      keys: ["alt", "d"],
       preventDefault: true,
       handler() {
         videoCardRef.value?.forward();
@@ -160,8 +166,9 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "z"],
+      keys: ["alt", "z"],
       preventDefault: true,
+      repeat: true,
       handler() {
         subtitleCardRef.value?.jumpToPrevGroup();
       },
@@ -170,8 +177,9 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "x"],
+      keys: ["alt", "x"],
       preventDefault: true,
+      repeat: true,
       handler() {
         subtitleCardRef.value?.jumpToNextGroup();
       },
@@ -180,17 +188,17 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["ctrl", "alt", "c"],
+      keys: ["alt", "c"],
       preventDefault: true,
       handler() {
-        subtitleCardRef.value?.createNewGroup();
+        subtitleCardRef.value?.copyNowGroup();
       },
     },
     info: "複製目前字幕到下一組",
   },
   {
     key: {
-      keys: ["ctrl", "alt", "v"],
+      keys: ["alt", "v"],
       preventDefault: true,
       handler() {
         const t =
@@ -200,6 +208,18 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
     },
     info: "套用目前影片時間",
   },
+  {
+    key: {
+      keys: ["alt", "n"],
+      preventDefault: true,
+      handler() {
+        const t =
+          videoCardRef.value?.getNowPlayingTimeString() || "00:00:00.000";
+        subtitleCardRef.value?.createNewGroup(t);
+      },
+    },
+    info: "以目前時間新增字幕",
+  },
 ]);
 
 const hotkeys = ref<HotKey[]>(hotkeysInfo.value.map((h) => h.key));
@@ -208,41 +228,46 @@ const toUpperKeys = (keys: string[]) => {
   return keys.map((k) => k.toUpperCase());
 };
 
-useHotkey(hotkeys.value);
-
 window.onbeforeunload = () => {
   return "Are you sure you want to leave?";
+};
+
+const holdingKeys = ref<Map<string, boolean>>(new Map());
+
+const hotkeyDown = (e: KeyboardEvent) => {
+  const key = e.key.toUpperCase();
+  holdingKeys.value.set(key, e.repeat);
+
+  for (const h of hotkeys.value) {
+    if (toUpperKeys(h.keys).every((k) => holdingKeys.value.has(k))) {
+      if (!e.repeat || h.repeat) {
+        if (h.preventDefault) {
+          e.preventDefault();
+        }
+        h.handler();
+      }
+    }
+  }
+};
+
+const hotkeyUp = (e: KeyboardEvent) => {
+  const key = e.key.toUpperCase();
+  holdingKeys.value.delete(key);
 };
 </script>
 
 <template>
-  <v-container>
+  <v-container
+    @keydown="hotkeyDown"
+    @keyup="hotkeyUp"
+  >
     <v-row
       align="center"
       justify="center"
     >
       <v-col
         cols="12"
-        md="2"
-      >
-        <v-card
-          v-for="k in hotkeysInfo"
-          :key="k.info"
-        >
-          <v-card-text>
-            <v-chip
-              color="primary"
-              label
-            >
-              {{ toUpperKeys(k.key.keys).join(" + ") }}
-            </v-chip>
-            {{ k.info }}
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col
-        cols="12"
-        md="5"
+        md="6"
       >
         <SubtitleCard
           ref="subtitleCardRef"
@@ -252,11 +277,31 @@ window.onbeforeunload = () => {
       </v-col>
       <v-col
         cols="12"
-        md="5"
+        md="6"
       >
         <VideoCard ref="videoCardRef" />
       </v-col>
     </v-row>
+    <v-container
+      class="mt-5 fill-height"
+      fluid
+    >
+      <v-card
+        v-for="k in hotkeysInfo"
+        :key="k.info"
+        class="ma-2"
+      >
+        <v-card-text>
+          <v-chip
+            color="primary"
+            label
+          >
+            {{ toUpperKeys(k.key.keys).join(" + ") }}
+          </v-chip>
+          {{ k.info }}
+        </v-card-text>
+      </v-card>
+    </v-container>
   </v-container>
 </template>
 
