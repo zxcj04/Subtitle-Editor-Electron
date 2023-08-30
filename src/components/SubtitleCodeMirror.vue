@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { shallowRef, computed } from "vue";
+import { ref, shallowRef, computed, onUnmounted } from "vue";
 
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { EditorState } from "@codemirror/state";
+import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "codemirror";
 import { ViewUpdate } from "@codemirror/view";
+import { onMounted } from "vue";
+
+const codemirrorRef = ref<InstanceType<typeof Codemirror> | null>(null);
+
+const animationFrameTask = ref<number | null>(null);
 
 const props = defineProps({
   subtitle: {
@@ -29,30 +34,170 @@ const extensions = [oneDark];
 
 // Codemirror EditorView instance ref
 const view = shallowRef<EditorView>();
-const handleReady = (payload: {
+const container = shallowRef<HTMLDivElement | null>(null);
+const handleReady = (cm: {
   view: EditorView;
   state: EditorState;
   container: HTMLDivElement;
 }) => {
-  console.log(payload);
-  view.value = payload.view;
+  view.value = cm.view;
+  container.value = cm.container;
 };
 
-const onViewUpdate = (cm: ViewUpdate) => {
-  const line = cm.state.doc.lineAt(cm.state.selection.main.head).number - 1;
+const lastGroup = shallowRef<number>(0);
+
+const onGroupUpdate = (nowGroup: number, state: EditorState) => {
+  if (nowGroup !== lastGroup.value) {
+    lastGroup.value = nowGroup;
+    emit("update-now-group", nowGroup);
+
+    if (view.value !== undefined) {
+      const nowLineTop = view.value.lineBlockAt(
+        state.selection.main.head
+      ).top;
+      view.value.scrollDOM.scroll({
+        top: nowLineTop - view.value.defaultLineHeight * 5,
+        behavior: "smooth",
+      });
+    }
+  }
+}
+
+const onViewUpdate = (update: ViewUpdate) => {
+  const line =
+    update.state.doc.lineAt(update.state.selection.main.head).number - 1;
   const nowGroup = Math.floor(line / 4);
-  emit("update-now-group", nowGroup);
+
+  onGroupUpdate(nowGroup, update.state);
 };
+
+const jumpToLine = (line: number) => {
+  if (view.value !== undefined) {
+    const pos = view.value.state.doc.line(line).from;
+    view.value.dispatch({
+      selection: EditorSelection.cursor(pos),
+    });
+  }
+};
+
+interface group {
+  index: string;
+  start: string;
+  end: string;
+  text: string;
+}
+
+const createNewGroup = (g: group) => {
+  const nextGroup = lastGroup.value + 1;
+  const nextGroupLine = nextGroup * 4+1;
+
+  if (view.value !== undefined) {
+    const pos = view.value.state.doc.line(nextGroupLine).from;
+    view.value.dispatch({
+      changes: {
+        from: pos,
+        insert: `${g.index}\n${g.start} --> ${g.end}\n${g.text}\n\n`,
+      },
+      selection: EditorSelection.cursor(pos),
+    });
+
+    onGroupUpdate(nextGroup, view.value.state);
+  }
+};
+
+const jumpToNextGroup = () => {
+  if (view.value === undefined) {
+    return;
+  }
+
+  const nextGroup = lastGroup.value + 1;
+  const nextGroupLine = nextGroup * 4 + 2;
+  const maxLines = view.value.state.doc.lines || 0;
+  if (nextGroupLine < maxLines) {
+    jumpToLine(nextGroupLine);
+    onGroupUpdate(nextGroup, view.value.state);
+  }
+};
+
+const jumpToPrevGroup = () => {
+  if (view.value === undefined) {
+    return;
+  }
+
+  const prevGroup = lastGroup.value - 1;
+  if (prevGroup >= 0) {
+    const prevGroupLine = prevGroup * 4 + 2;
+    jumpToLine(prevGroupLine);
+    onGroupUpdate(prevGroup, view.value.state);
+  }
+};
+
+const editCursorLineTime = (t: string) => {
+  if (view.value === undefined) {
+    return;
+  }
+
+  const line = view.value.state.doc.lineAt(view.value.state.selection.main.head);
+  const posInLine = view.value.state.selection.main.head - line.from;
+  const lineText = line.text;
+
+  const isStart = posInLine < 12;
+  const isEnd = posInLine >= 17;
+
+  if (isStart || isEnd) {
+    const newLineText = isStart
+      ? `${t} --> ${lineText.slice(17)}`
+      : `${lineText.slice(0, 12)} --> ${t}`;
+    const pos = view.value.state.doc.line(line.number).from;
+    const posEnd = view.value.state.doc.line(line.number).to;
+    view.value.dispatch({
+      changes: {
+        from: pos,
+        to: posEnd,
+        insert: newLineText,
+      },
+      selection: EditorSelection.cursor(pos + posInLine),
+    });
+  }
+}
+
+const forceFocusOnEditor = () => {
+  if (view.value !== undefined) {
+    view.value.focus();
+  }
+
+  animationFrameTask.value = requestAnimationFrame(forceFocusOnEditor);
+};
+
+onMounted(() => {
+  animationFrameTask.value = requestAnimationFrame(forceFocusOnEditor);
+});
+
+onUnmounted(() => {
+  if (animationFrameTask.value !== null) {
+    cancelAnimationFrame(animationFrameTask.value);
+  }
+});
+
+defineExpose({
+  jumpToLine,
+  jumpToNextGroup,
+  jumpToPrevGroup,
+  createNewGroup,
+  editCursorLineTime,
+});
 </script>
 
 <template>
   <codemirror
+    ref="codemirrorRef"
     v-model="subtitle"
     placeholder="空空如也~~"
     :style="{ height: '70vh' }"
     :indent-with-tab="true"
     :tab-size="2"
     :extensions="extensions"
+    :autofocus="true"
     @ready="handleReady"
     @update="onViewUpdate"
   />

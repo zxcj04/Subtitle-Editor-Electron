@@ -17,11 +17,14 @@
     "@codemirror/state": "6.x",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@typescript-eslint/parser": "^6.4.1",
+    "@videojs-player/vue": "^1.0.0",
     "@vue/eslint-config-typescript": "^11.0.3",
     "codemirror": "^6.0.1",
     "srt-parser-2": "^1.2.3",
+    "video.js": "^8.5.2",
     "vue": "^3.3.4",
-    "vue-codemirror": "^6.1.1"
+    "vue-codemirror": "^6.1.1",
+    "vue3-hotkey": "^1.0.3"
   },
   "devDependencies": {
     "@mdi/font": "^7.2.96",

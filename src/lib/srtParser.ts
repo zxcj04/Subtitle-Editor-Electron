@@ -21,4 +21,5 @@ const toSrt = (list: Srt[]) => {
   return srt;
 };
 
+export type { Srt };
 export { toList, toSrt };

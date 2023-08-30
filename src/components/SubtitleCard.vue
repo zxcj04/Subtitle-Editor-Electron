@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 
-import { toList, toSrt } from "@/lib/srtParser";
+import { Srt, toList, toSrt } from "@/lib/srtParser";
 import { VFileInput } from "vuetify/components";
 
 import SubtitleCodeMirror from "./SubtitleCodeMirror.vue";
+import { nextTick } from "vue";
 
 const subtitleFileSelector = ref<VFileInput | null>(null);
+const subtitleCodeMirrorRef = ref<InstanceType<typeof SubtitleCodeMirror> | null>(
+  null
+);
 
 const subtitleFile = ref<Array<File>>([]);
 const subtitleText = ref<string>("");
+const subtitleList = computed<Array<Srt>>(() => toList(subtitleText.value));
+
+const emit = defineEmits(["update-subtitle", "update-time"]);
 
 const readFile = (file: File) => {
   return new Promise<string>((resolve, reject) => {
@@ -38,6 +45,7 @@ const onSubtitleFileChange = async () => {
   await readFile(file)
     .then((result) => {
       subtitleText.value = toSrt(toList(result));
+      // emit("update-subtitle", subtitleText.value);
     })
     .catch((error) => {
       alert(error);
@@ -45,10 +53,72 @@ const onSubtitleFileChange = async () => {
 };
 
 watch(subtitleFile, onSubtitleFileChange);
+watch(subtitleText, () => {
+  emit("update-subtitle", subtitleText.value);
+});
+
+const lastGroup = ref<number>(0);
 
 const updateNowGroup = (nowGroup: number) => {
-  console.log("updateNowGroup", nowGroup);
+  lastGroup.value = nowGroup;
+
+  if (subtitleList.value.length === 0) {
+    return false;
+  }
+
+  let t = subtitleList.value[nowGroup].startSeconds;
+  if (t < 0) t = 0;
+
+  const duration =
+    subtitleList.value[nowGroup].endSeconds -
+    subtitleList.value[nowGroup].startSeconds;
+
+  emit("update-time", t, duration);
 };
+
+const createNewGroup = async () => {
+  if (subtitleCodeMirrorRef.value === null)
+    return;
+
+  const lastSubtitle = subtitleList.value[lastGroup.value];
+
+  subtitleCodeMirrorRef.value.createNewGroup({
+    index: parseInt(lastSubtitle.id) + 1 + "",
+    start: lastSubtitle.startTime,
+    end: lastSubtitle.endTime,
+    text: lastSubtitle.text,
+  });
+
+  await nextTick();
+};
+
+const jumpToNextGroup = () => {
+  if (subtitleCodeMirrorRef.value === null)
+    return;
+
+  subtitleCodeMirrorRef.value.jumpToNextGroup();
+};
+
+const jumpToPrevGroup = () => {
+  if (subtitleCodeMirrorRef.value === null)
+    return;
+
+  subtitleCodeMirrorRef.value.jumpToPrevGroup();
+};
+
+const editCursorLineTime = (time: string) => {
+  if (subtitleCodeMirrorRef.value === null)
+    return;
+
+  subtitleCodeMirrorRef.value.editCursorLineTime(time);
+};
+
+defineExpose({
+  jumpToNextGroup,
+  jumpToPrevGroup,
+  createNewGroup,
+  editCursorLineTime,
+});
 </script>
 
 <template>
@@ -63,6 +133,7 @@ const updateNowGroup = (nowGroup: number) => {
         :clearable="false"
       />
       <SubtitleCodeMirror
+        ref="subtitleCodeMirrorRef"
         v-model:subtitle="subtitleText"
         @update-now-group="updateNowGroup"
       />
