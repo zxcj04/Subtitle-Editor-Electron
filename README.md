@@ -10,6 +10,13 @@
 
 ![](https://i.imgur.com/590Lem6.gif)
 
+### 自定義快捷鍵
+
+可以自己設定快捷鍵
+並且在重開程式後也會自動讀取
+
+![1-1-0](https://github.com/zxcj04/Subtitle-Editor-Electron/assets/32776291/1bef63ed-1705-4ffc-8a95-9405bdcfc91e)
+
 ## 下載 Download
 
 請移至 [Release](https://github.com/zxcj04/Subtitle-Editor-Electron/releases) 頁面下載最新版本。
