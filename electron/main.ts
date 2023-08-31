@@ -15,13 +15,21 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+  if (NODE_ENV !== "development") {
+    mainWindow.setMenu(null);
+  }
+
+  mainWindow.loadURL(
+    NODE_ENV === "development"
+      ? "http://localhost:5173"
+      : `file://${path.join(__dirname, "../dist/index.html")}`
+  );
 
   if (NODE_ENV === "development") {
     mainWindow.webContents.openDevTools();
   }
 
-  mainWindow.on('close', function(e) {
+  mainWindow.on("close", function (e) {
     e.preventDefault();
     mainWindow.destroy();
   });

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed, onMounted } from "vue";
 
 import SubtitleCard from "@/components/SubtitleCard.vue";
 import VideoCard from "@/components/VideoCard.vue";
+import EditHotkeyOverlay from "@/components/EditHotkeyOverlay.vue";
 
 const subtitleCardRef = ref<InstanceType<typeof SubtitleCard> | null>(null);
 const videoCardRef = ref<InstanceType<typeof VideoCard> | null>(null);
@@ -91,33 +92,27 @@ interface HotKeyInfo {
   info: string;
 }
 
+const originHotkeyConfig = ref<Map<string, string>>(new Map());
+
+const storeHotkeyConfigToLocalStorage = () => {
+  hotkeysInfo.value.forEach((info) => {
+    localStorage.setItem(info.info, JSON.stringify(info.key.keys));
+  });
+};
+
+const restoreHotkeyConfigFromLocalStorage = () => {
+  hotkeysInfo.value.forEach((info) => {
+    const keys = localStorage.getItem(info.info);
+    if (keys !== null) {
+      info.key.keys = JSON.parse(keys);
+    }
+  });
+};
+
 const hotkeysInfo = ref<HotKeyInfo[]>([
   {
     key: {
-      keys: ["alt", "e"],
-      repeat: true,
-      preventDefault: true,
-      handler() {
-        videoCardRef.value?.nextFrame();
-      },
-    },
-    info: "下一幀",
-  },
-  {
-    key: {
-      keys: ["alt", "q"],
-      repeat: true,
-      preventDefault: true,
-      handler() {
-        videoCardRef.value?.previousFrame();
-      },
-    },
-    info: "上一幀",
-  },
-  {
-    key: {
       keys: ["alt", "w"],
-      preventDefault: true,
       handler() {
         videoCardRef.value?.togglePlay();
       },
@@ -126,8 +121,54 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["alt", "r"],
-      preventDefault: true,
+      keys: ["alt", "q"],
+      handler() {
+        videoCardRef.value?.backward();
+      },
+    },
+    info: "後退 (10s)",
+  },
+  {
+    key: {
+      keys: ["alt", "e"],
+      handler() {
+        videoCardRef.value?.forward();
+      },
+    },
+    info: "前進 (5s)",
+  },
+  {
+    key: {
+      keys: ["control", "alt", "w"],
+      handler() {
+        videoCardRef.value?.togglePlaybackRate();
+      },
+    },
+    info: "切換播放速度 (1x / 2x)",
+  },
+  {
+    key: {
+      keys: ["control", "alt", "q"],
+      repeat: true,
+      handler() {
+        videoCardRef.value?.previousFrame();
+      },
+    },
+    info: "上一幀",
+  },
+  {
+    key: {
+      keys: ["control", "alt", "e"],
+      repeat: true,
+      handler() {
+        videoCardRef.value?.nextFrame();
+      },
+    },
+    info: "下一幀",
+  },
+  {
+    key: {
+      keys: ["alt", "s"],
       handler() {
         updateVideoTime();
       },
@@ -137,37 +178,6 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   {
     key: {
       keys: ["alt", "a"],
-      preventDefault: true,
-      handler() {
-        videoCardRef.value?.backward();
-      },
-    },
-    info: "後退 (10s)",
-  },
-  {
-    key: {
-      keys: ["alt", "s"],
-      preventDefault: true,
-      handler() {
-        videoCardRef.value?.togglePlaybackRate();
-      },
-    },
-    info: "切換播放速度 (1x / 2x)",
-  },
-  {
-    key: {
-      keys: ["alt", "d"],
-      preventDefault: true,
-      handler() {
-        videoCardRef.value?.forward();
-      },
-    },
-    info: "前進 (5s)",
-  },
-  {
-    key: {
-      keys: ["alt", "z"],
-      preventDefault: true,
       repeat: true,
       handler() {
         subtitleCardRef.value?.jumpToPrevGroup();
@@ -177,8 +187,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   },
   {
     key: {
-      keys: ["alt", "x"],
-      preventDefault: true,
+      keys: ["alt", "d"],
       repeat: true,
       handler() {
         subtitleCardRef.value?.jumpToNextGroup();
@@ -189,7 +198,6 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   {
     key: {
       keys: ["alt", "c"],
-      preventDefault: true,
       handler() {
         subtitleCardRef.value?.copyNowGroup();
       },
@@ -199,7 +207,6 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   {
     key: {
       keys: ["alt", "v"],
-      preventDefault: true,
       handler() {
         const t =
           videoCardRef.value?.getNowPlayingTimeString() || "00:00:00.000";
@@ -211,7 +218,6 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
   {
     key: {
       keys: ["alt", "n"],
-      preventDefault: true,
       handler() {
         const t =
           videoCardRef.value?.getNowPlayingTimeString() || "00:00:00.000";
@@ -220,9 +226,25 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
     },
     info: "以目前時間新增字幕",
   },
+  {
+    key: {
+      keys: ["control", "shift", "f2"],
+      handler() {
+        hotkeysInfo.value.forEach((h) => {
+          h.key.keys =
+            JSON.parse(originHotkeyConfig.value.get(h.info) || "[]") ||
+            h.key.keys;
+        });
+        storeHotkeyConfigToLocalStorage();
+      },
+    },
+    info: "恢復預設快捷鍵設定",
+  },
 ]);
 
-const hotkeys = ref<HotKey[]>(hotkeysInfo.value.map((h) => h.key));
+const hotkeys = computed(() => {
+  return hotkeysInfo.value.map((h) => h.key);
+});
 
 const toUpperKeys = (keys: string[]) => {
   return keys.map((k) => k.toUpperCase());
@@ -232,18 +254,33 @@ window.onbeforeunload = () => {
   return "Are you sure you want to leave?";
 };
 
-const holdingKeys = ref<Map<string, boolean>>(new Map());
+const holdingKeysMap = ref<Map<string, boolean>>(new Map());
+
+const holdingKeys = computed(() => {
+  return Array.from(holdingKeysMap.value.keys());
+});
 
 const hotkeyDown = (e: KeyboardEvent) => {
   const key = e.key.toUpperCase();
-  holdingKeys.value.set(key, e.repeat);
+  holdingKeysMap.value.set(key, e.repeat);
+
+  if (holdingKeysMap.value.has("ALT")) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  if (editingHotkey.value.isEditing) {
+    return;
+  }
 
   for (const h of hotkeys.value) {
-    if (toUpperKeys(h.keys).every((k) => holdingKeys.value.has(k))) {
+    if (
+      h.keys.length === holdingKeysMap.value.size &&
+      toUpperKeys(h.keys).every((k) => holdingKeysMap.value.has(k))
+    ) {
       if (!e.repeat || h.repeat) {
-        if (h.preventDefault) {
-          e.preventDefault();
-        }
+        e.preventDefault();
+        e.stopPropagation();
         h.handler();
       }
     }
@@ -252,8 +289,65 @@ const hotkeyDown = (e: KeyboardEvent) => {
 
 const hotkeyUp = (e: KeyboardEvent) => {
   const key = e.key.toUpperCase();
-  holdingKeys.value.delete(key);
+  holdingKeysMap.value.delete(key);
 };
+
+const shouldBeDisabled = (keys: string[]) => {
+  if (holdingKeysMap.value.size === 0 || editingHotkey.value.isEditing) {
+    return false;
+  }
+  return !holdingKeys.value.every((k) => toUpperKeys(keys).includes(k));
+};
+
+const shouldBeGreen = (keys: string[]) => {
+  if (holdingKeysMap.value.size === 0 || editingHotkey.value.isEditing) {
+    return false;
+  }
+  return (
+    keys.length === holdingKeysMap.value.size &&
+    toUpperKeys(keys).every((k) => holdingKeysMap.value.has(k))
+  );
+};
+
+const editingHotkey = ref<{
+  isEditing: boolean;
+  index: number;
+  hotkey: HotKeyInfo;
+}>({
+  isEditing: false,
+  index: -1,
+  hotkey: {
+    key: {
+      keys: [],
+      preventDefault: false,
+      repeat: false,
+      handler() {},
+    },
+    info: "",
+  },
+});
+
+const startEditingHotkey = (index: number) => {
+  editingHotkey.value.isEditing = true;
+  editingHotkey.value.index = index;
+  editingHotkey.value.hotkey = hotkeysInfo.value[index];
+};
+
+const updateHotkey = (index: number, keys: Set<string>) => {
+  const h = hotkeysInfo.value[index];
+  h.key.keys = Array.from(keys);
+  hotkeysInfo.value.splice(index, 1, h);
+  storeHotkeyConfigToLocalStorage();
+};
+
+onMounted(() => {
+  originHotkeyConfig.value = hotkeysInfo.value.reduce((acc, cur) => {
+    acc.set(cur.info, JSON.stringify(cur.key.keys));
+    return acc;
+  }, new Map());
+
+  restoreHotkeyConfigFromLocalStorage();
+});
 </script>
 
 <template>
@@ -290,10 +384,13 @@ const hotkeyUp = (e: KeyboardEvent) => {
         v-for="k in hotkeysInfo"
         :key="k.info"
         class="ma-2"
+        :disabled="shouldBeDisabled(k.key.keys)"
+        @click="startEditingHotkey(hotkeysInfo.indexOf(k))"
       >
         <v-card-text>
           <v-chip
-            color="primary"
+            class="mr-1"
+            :color="shouldBeGreen(k.key.keys) ? 'green' : 'primary'"
             label
           >
             {{ toUpperKeys(k.key.keys).join(" + ") }}
@@ -302,6 +399,13 @@ const hotkeyUp = (e: KeyboardEvent) => {
         </v-card-text>
       </v-card>
     </v-container>
+    <EditHotkeyOverlay
+      v-model="editingHotkey.isEditing"
+      :originhotkey="editingHotkey.hotkey.key.keys"
+      :description="editingHotkey.hotkey.info"
+      :index="editingHotkey.index"
+      @update-hotkey="updateHotkey"
+    />
   </v-container>
 </template>
 

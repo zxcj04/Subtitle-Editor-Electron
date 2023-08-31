@@ -3,7 +3,7 @@
   "description": "An electron app to edit subtitles with only keyboards",
   "author": "Fanrende",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "electron/main.ts",
   "scripts": {
     "dev": "vite",
@@ -24,14 +24,16 @@
       "icon": "./public/catLogo.png"
     },
     "win": {
+      "target": ["portable"],
       "icon": "./public/catLogo.png"
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "public/**/*"
     ],
     "directories": {
-      "buildResources": "assets",
+      "buildResources": "public",
       "output": "dist_electron"
     }
   },
