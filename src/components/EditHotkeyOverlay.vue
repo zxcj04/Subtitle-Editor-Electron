@@ -19,9 +19,18 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  holdingkeys: {
+    type: Array as PropType<string[]>,
+    required: true,
+  },
 });
 
-const emit = defineEmits(["update:modelValue", "update-hotkey"]);
+const emit = defineEmits([
+  "update:modelValue",
+  "update-hotkey",
+  "keyup",
+  "keydown",
+]);
 
 const openOverlay = computed({
   get() {
@@ -66,11 +75,35 @@ const toggleInputingNewHotkey = () => {
   }
 };
 
+watch(
+  () => props.holdingkeys,
+  (value) => {
+    if (!props.modelValue) {
+      return;
+    }
+    if (!inputingNewHotkey.value && value.length > 0) {
+      hotkey.value = new Set(value);
+      inputingNewHotkey.value = true;
+    } else if (inputingNewHotkey.value && value.length === 0) {
+      inputingNewHotkey.value = false;
+    } else if (inputingNewHotkey.value) {
+      hotkey.value.add(value[value.length - 1]);
+    }
+  }
+);
+
 const hotkeyDown = (e: KeyboardEvent) => {
-  if (!inputingNewHotkey.value) {
+  if (!props.modelValue) {
     return;
   }
-  hotkey.value?.add(e.key);
+  emit("keydown", e);
+};
+
+const hotkeyUp = (e: KeyboardEvent) => {
+  if (!props.modelValue) {
+    return;
+  }
+  emit("keyup", e);
 };
 </script>
 
@@ -80,6 +113,7 @@ const hotkeyDown = (e: KeyboardEvent) => {
     align="center"
     persistent
     @keydown="hotkeyDown"
+    @keyup="hotkeyUp"
   >
     <v-card
       class="ma-auto py-4"

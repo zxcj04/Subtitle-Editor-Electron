@@ -48,6 +48,8 @@ function convertSRTtoVTT(srtContent: string) {
 }
 
 const updateSubtitle = (s: string) => {
+  clearKeysMap();
+
   if (videoCardRef.value === null) {
     return false;
   }
@@ -260,6 +262,10 @@ const holdingKeys = computed(() => {
   return Array.from(holdingKeysMap.value.keys());
 });
 
+const clearKeysMap = () => {
+  holdingKeysMap.value.clear();
+};
+
 const hotkeyDown = (e: KeyboardEvent) => {
   const key = e.key.toUpperCase();
   holdingKeysMap.value.set(key, e.repeat);
@@ -267,10 +273,6 @@ const hotkeyDown = (e: KeyboardEvent) => {
   if (holdingKeysMap.value.has("ALT")) {
     e.preventDefault();
     e.stopPropagation();
-  }
-
-  if (editingHotkey.value.isEditing) {
-    return;
   }
 
   for (const h of hotkeys.value) {
@@ -281,7 +283,10 @@ const hotkeyDown = (e: KeyboardEvent) => {
       if (!e.repeat || h.repeat) {
         e.preventDefault();
         e.stopPropagation();
-        h.handler();
+
+        if (!editingHotkey.value.isEditing) {
+          h.handler();
+        }
       }
     }
   }
@@ -404,7 +409,10 @@ onMounted(() => {
       :originhotkey="editingHotkey.hotkey.key.keys"
       :description="editingHotkey.hotkey.info"
       :index="editingHotkey.index"
+      :holdingkeys="holdingKeys"
       @update-hotkey="updateHotkey"
+      @keydown="hotkeyDown"
+      @keyup="hotkeyUp"
     />
   </v-container>
 </template>
