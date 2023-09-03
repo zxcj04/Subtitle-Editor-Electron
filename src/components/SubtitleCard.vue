@@ -15,7 +15,7 @@ const subtitleFile = ref<Array<File>>([]);
 const subtitleText = ref<string>("");
 const subtitleList = computed<Array<Srt>>(() => toList(subtitleText.value));
 
-const emit = defineEmits(["update-subtitle", "update-time"]);
+const emit = defineEmits(["update-subtitle", "update-time", "onEditorFocus"]);
 
 const readFile = (file: File) => {
   return new Promise<string>((resolve, reject) => {
@@ -104,17 +104,20 @@ const createNewGroup = async (t: string) => {
   await nextTick();
 };
 
-const copyNowGroup = async () => {
+const copyNowGroup = async (nowTimeString: string) => {
   if (subtitleCodeMirrorRef.value === null) return;
 
   const lastSubtitle = subtitleList.value[lastGroup.value];
 
-  subtitleCodeMirrorRef.value.createNewGroup({
-    index: lastSubtitle.id,
-    start: lastSubtitle.startTime,
-    end: lastSubtitle.endTime,
-    text: lastSubtitle.text,
-  });
+  subtitleCodeMirrorRef.value.copyNowGroup(
+    {
+      index: lastSubtitle.id,
+      start: lastSubtitle.startTime,
+      end: lastSubtitle.endTime,
+      text: lastSubtitle.text,
+    },
+    nowTimeString
+  );
 
   await nextTick();
 };
@@ -161,6 +164,7 @@ defineExpose({
         ref="subtitleCodeMirrorRef"
         v-model:subtitle="subtitleText"
         @update-now-group="updateNowGroup"
+        @onfocus="emit('onEditorFocus')"
       />
     </v-card-text>
   </v-card>

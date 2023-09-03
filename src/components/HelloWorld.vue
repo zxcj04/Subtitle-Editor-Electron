@@ -48,8 +48,6 @@ function convertSRTtoVTT(srtContent: string) {
 }
 
 const updateSubtitle = (s: string) => {
-  clearKeysMap();
-
   if (videoCardRef.value === null) {
     return false;
   }
@@ -128,7 +126,7 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
         videoCardRef.value?.backward();
       },
     },
-    info: "後退 (10s)",
+    info: "後退 (5s)",
   },
   {
     key: {
@@ -201,7 +199,9 @@ const hotkeysInfo = ref<HotKeyInfo[]>([
     key: {
       keys: ["alt", "c"],
       handler() {
-        subtitleCardRef.value?.copyNowGroup();
+        subtitleCardRef.value?.copyNowGroup(
+          videoCardRef.value?.getNowPlayingTimeString() || "00:00:00.000"
+        );
       },
     },
     info: "複製目前字幕到下一組",
@@ -372,6 +372,7 @@ onMounted(() => {
           ref="subtitleCardRef"
           @update-subtitle="updateSubtitle"
           @update-time="updateNowGroup"
+          @on-editor-focus="clearKeysMap"
         />
       </v-col>
       <v-col
