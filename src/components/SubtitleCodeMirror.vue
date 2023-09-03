@@ -52,7 +52,7 @@ const onGroupUpdate = (nowGroup: number, state: EditorState) => {
     if (view.value !== undefined) {
       const nowLineTop = view.value.lineBlockAt(state.selection.main.head).top;
       view.value.scrollDOM.scroll({
-        top: nowLineTop - view.value.defaultLineHeight * 5,
+        top: nowLineTop - view.value.defaultLineHeight * 8,
         behavior: "smooth",
       });
     }
@@ -181,12 +181,15 @@ const copyNowGroup = (g: group, nowTimeString: string) => {
   ).to;
 
   view.value.dispatch({
+    selection: EditorSelection.cursor(newGroupPos),
+  })
+
+  view.value.dispatch({
     changes: {
       from: oldGroupPos,
       to: newGroupPos,
       insert: `${g.index}\n${g.start} --> ${nowTimeString}\n${oldText}\n\n${g.index}\n${nowTimeString} --> ${g.end}\n${newText}\n`,
     },
-    selection: EditorSelection.cursor(oldGroupPos),
   });
 
   onGroupUpdate(nextGroup, view.value.state);
